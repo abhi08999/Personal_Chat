@@ -38,7 +38,7 @@ export async function GET() {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   await connectDB();
-  const me2 = await User.findById(me.id).lean();
+  const me2 = await User.findById(me.id).lean() as any;
   return NextResponse.json({
     publicKey: me2?.publicKey || null,
     sealedPrivateKey: me2?.sealedPrivateKey || null,

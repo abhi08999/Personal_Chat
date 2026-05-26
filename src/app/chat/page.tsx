@@ -11,7 +11,7 @@ export default async function ChatPage() {
   if (!me) redirect('/lock');
 
   await connectDB();
-  const peerDoc = await User.findOne({ _id: { $ne: me.id } }).lean();
+  const peerDoc = await User.findOne({ _id: { $ne: me.id } }).lean() as any;
   const peer = peerDoc ? {
     id: String(peerDoc._id),
     handle: peerDoc.handle,

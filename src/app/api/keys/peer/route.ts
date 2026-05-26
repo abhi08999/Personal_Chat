@@ -7,7 +7,7 @@ export async function GET() {
   const me = await getCurrentUser();
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   await connectDB();
-  const peer = await User.findOne({ _id: { $ne: me.id } }).lean();
+  const peer = await User.findOne({ _id: { $ne: me.id } }).lean() as any;
   if (!peer) return NextResponse.json({ peer: null });
   return NextResponse.json({
     peer: {

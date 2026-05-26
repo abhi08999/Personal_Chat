@@ -32,7 +32,7 @@ export async function getCurrentUser() {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as { sub: string; handle: string };
     await connectDB();
-    const user = await User.findById(payload.sub).lean();
+    const user = await User.findById(payload.sub).lean() as any;
     if (!user) return null;
     return {
       id: String(user._id),
