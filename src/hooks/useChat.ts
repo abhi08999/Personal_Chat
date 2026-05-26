@@ -47,14 +47,8 @@ export function useChat(me: Me, peer: Peer) {
     return () => { objectUrlsRef.current.forEach(URL.revokeObjectURL); };
   }, []);
 
-  // Erase all messages when the tab/window is closed
-  useEffect(() => {
-    function onPageHide() {
-      navigator.sendBeacon('/api/messages/clear');
-    }
-    window.addEventListener('pagehide', onPageHide);
-    return () => window.removeEventListener('pagehide', onPageHide);
-  }, []);
+  // Messages are cleared on logout (ChatHeader) — not on tab close,
+  // because closing the tab before the other person reads would wipe their messages.
 
   const decrypt = useCallback(async (m: WireMessage): Promise<DecryptedMessage> => {
     if (!privateKeyRef.current || !peer.publicKey) {
@@ -67,7 +61,8 @@ export function useChat(me: Me, peer: Peer) {
         const text = await decryptText(m.ciphertext, m.nonce, peerPub, privateKeyRef.current);
         return { ...m, plaintext: text };
       } else if (m.contentType === 'image' && m.mediaUrl && m.mediaKeyNonce) {
-        const res = await fetch(m.mediaUrl);
+        const res = await fetch(m.mediaUrl, { mode: 'cors' });
+        if (!res.ok) throw new Error(`blob fetch ${res.status}`);
         const ct = new Uint8Array(await res.arrayBuffer());
         const bytes = await decryptBytesFromPeer(
           ct,
@@ -119,7 +114,14 @@ export function useChat(me: Me, peer: Peer) {
         const idx = m.clientId ? prev.findIndex((x) => x.clientId === m.clientId && x.pending) : -1;
         if (idx >= 0) {
           const copy = prev.slice();
-          copy[idx] = d;
+          const optimistic = prev[idx];
+          // Sender's own image: keep the local object URL if re-decrypt fails
+          // (Blob fetch from a different origin can be flaky on mobile)
+          if (d.failed && optimistic.imageObjectUrl) {
+            copy[idx] = { ...d, imageObjectUrl: optimistic.imageObjectUrl, failed: false, pending: false };
+          } else {
+            copy[idx] = d;
+          }
           return copy;
         }
         if (prev.some((x) => x._id === m._id)) return prev;
