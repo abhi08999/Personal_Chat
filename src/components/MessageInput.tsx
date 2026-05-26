@@ -20,8 +20,33 @@ export function MessageInput({
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const typingTimer = useRef<any>(null);
+  const emojiOverlayRef = useRef(false);
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url); }, [preview]);
+
+  // Intercept Android back button to close emoji picker instead of exiting the app
+  useEffect(() => {
+    function onPop() {
+      emojiOverlayRef.current = false;
+      setShowEmoji(false);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  function openEmojiPicker() {
+    emojiOverlayRef.current = true;
+    history.pushState({ am_overlay: 'emoji' }, '');
+    setShowEmoji(true);
+  }
+
+  function closeEmojiPicker() {
+    setShowEmoji(false);
+    if (emojiOverlayRef.current) {
+      emojiOverlayRef.current = false;
+      history.back();
+    }
+  }
 
   function autoResize() {
     const ta = taRef.current; if (!ta) return;
@@ -64,7 +89,7 @@ export function MessageInput({
   }
 
   return (
-    <div className="sticky bottom-0 z-10 backdrop-blur-2xl bg-white/75 border-t border-blush-200/50">
+    <div className="shrink-0 z-10 backdrop-blur-2xl bg-white/75 border-t border-blush-200/50">
       <div className="max-w-3xl mx-auto px-3 sm:px-5 py-3" style={{ paddingBottom: 'calc(0.75rem + var(--safe-bottom))' }}>
         {preview && (
           <div className="mb-2 inline-flex items-center gap-2 bg-white rounded-2xl border border-blush-200/60 p-2 shadow-bubble">
@@ -108,7 +133,7 @@ export function MessageInput({
 
           <button
             type="button"
-            onClick={() => setShowEmoji((v) => !v)}
+            onClick={() => showEmoji ? closeEmojiPicker() : openEmojiPicker()}
             className="p-2 rounded-2xl hover:bg-blush-100 text-ink-700/70"
             aria-label="Emoji"
           >
@@ -132,7 +157,7 @@ export function MessageInput({
               <Picker
                 onEmojiClick={(e: any) => {
                   setText((t) => t + e.emoji);
-                  setShowEmoji(false);
+                  closeEmojiPicker();
                   requestAnimationFrame(autoResize);
                 }}
                 width={320}

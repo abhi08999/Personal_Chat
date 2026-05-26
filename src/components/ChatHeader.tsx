@@ -4,9 +4,14 @@ import { LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
+const HANDLE_EMOJIS: Record<string, string> = {
+  abhi: '❤️😘',
+  mommy: '🥵',
+};
+
 export function ChatHeader({
-  peerName, online, peerTyping,
-}: { peerName: string; online: boolean; peerTyping: boolean }) {
+  peerName, peerHandle, online, peerTyping,
+}: { peerName: string; peerHandle: string; online: boolean; peerTyping: boolean }) {
   const router = useRouter();
   async function logout() {
     await fetch('/api/messages/clear', { method: 'POST' });
@@ -14,12 +19,13 @@ export function ChatHeader({
     sessionStorage.removeItem('am.kpw');
     router.replace('/lock');
   }
+  const nameEmoji = HANDLE_EMOJIS[peerHandle] ?? '';
   return (
-    <header className="sticky top-0 z-20 backdrop-blur-2xl bg-white/65 border-b border-blush-200/50">
+    <header className="shrink-0 z-20 backdrop-blur-2xl bg-white/65 border-b border-blush-200/50">
       <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
         <Avatar name={peerName} size={42} online={online} />
         <div className="flex-1 min-w-0">
-          <div className="font-display text-lg leading-tight truncate">{peerName}</div>
+          <div className="font-display text-lg leading-tight truncate">{peerName}{nameEmoji && <span className="ml-1">{nameEmoji}</span>}</div>
           <div className="text-[11px] text-ink-700/60 truncate">
             {peerTyping ? 'typing…' : online ? 'online' : 'offline'}
           </div>

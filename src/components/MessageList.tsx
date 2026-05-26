@@ -13,6 +13,31 @@ export function MessageList({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const lightboxOverlayRef = useRef(false);
+
+  // Intercept Android back button to close lightbox instead of exiting the app
+  useEffect(() => {
+    function onPop() {
+      lightboxOverlayRef.current = false;
+      setLightbox(null);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  function openLightbox(url: string) {
+    lightboxOverlayRef.current = true;
+    history.pushState({ am_overlay: 'lightbox' }, '');
+    setLightbox(url);
+  }
+
+  function closeLightbox() {
+    setLightbox(null);
+    if (lightboxOverlayRef.current) {
+      lightboxOverlayRef.current = false;
+      history.back();
+    }
+  }
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -45,7 +70,7 @@ export function MessageList({
   }
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
       <div className="max-w-3xl mx-auto px-3 sm:px-5 py-5 space-y-5">
         {groups.map((g, i) => (
           <div key={i} className="space-y-2">
@@ -57,7 +82,7 @@ export function MessageList({
                 isMine={m.from === me.id}
                 peerId={peer.id}
                 onReact={onReact}
-                onOpenImage={setLightbox}
+                onOpenImage={openLightbox}
               />
             ))}
           </div>
@@ -69,7 +94,7 @@ export function MessageList({
 
       {lightbox && (
         <button
-          onClick={() => setLightbox(null)}
+          onClick={closeLightbox}
           className="fixed inset-0 z-50 bg-ink-900/80 backdrop-blur-md grid place-items-center p-6"
         >
           <img src={lightbox} alt="" className="max-h-[88vh] max-w-full rounded-2xl shadow-glow" />

@@ -76,11 +76,11 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
   if (!ready) return <Centered>Unsealing your messages…</Centered>;
 
   return (
-    <main className="flex flex-col h-dvh select-none">
+    <main className="flex flex-col h-dvh overflow-hidden select-none">
       {screenGuard && (
         <div className="fixed inset-0 z-[9999] backdrop-blur-3xl bg-white/90" />
       )}
-      <ChatHeader peerName={peer.displayName} online={online.has(peer.id)} peerTyping={peerTyping} />
+      <ChatHeader peerName={peer.displayName} peerHandle={peer.handle} online={online.has(peer.id)} peerTyping={peerTyping} />
       <MessageList
         messages={messages}
         me={me}
