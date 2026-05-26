@@ -14,7 +14,6 @@ export function ChatHeader({
 }: { peerName: string; peerHandle: string; online: boolean; peerTyping: boolean }) {
   const router = useRouter();
   async function logout() {
-    await fetch('/api/messages/clear', { method: 'POST' });
     await fetch('/api/auth/logout', { method: 'POST' });
     sessionStorage.removeItem('am.kpw');
     router.replace('/lock');

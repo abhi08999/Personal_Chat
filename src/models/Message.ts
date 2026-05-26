@@ -11,8 +11,10 @@ const MessageSchema = new Schema({
   mediaKeyNonce: { type: String, default: null },
   clientId: { type: String, default: null }, // for optimistic dedup
   reactions: { type: Map, of: String, default: {} },
-  readAt: { type: Date, default: null },
-  createdAt: { type: Date, default: Date.now, index: true },
+  // TTL: deleted 12 hours after the receiver marks it read
+  readAt: { type: Date, default: null, expires: 43200 },
+  // Fallback TTL: unread messages expire after 24 hours
+  createdAt: { type: Date, default: Date.now, expires: 86400 },
 });
 
 export const Message = (models.Message as mongoose.Model<any>) || model('Message', MessageSchema);

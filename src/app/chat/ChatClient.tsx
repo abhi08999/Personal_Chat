@@ -12,6 +12,16 @@ export function ChatClient({
   me, peer,
 }: { me: Me; peer: Peer | null }) {
   const router = useRouter();
+
+  // Require password re-entry on every new browser session.
+  // sessionStorage is cleared when the tab/window is closed, so this
+  // effectively auto-logs-out the user on close without wiping their history.
+  useEffect(() => {
+    if (!sessionStorage.getItem('am.kpw')) {
+      router.replace('/lock');
+    }
+  }, [router]);
+
   const [peerWithKey, setPeerWithKey] = useState<Peer | null>(peer);
 
   // Poll for peer key in case they haven't logged in yet
@@ -76,7 +86,7 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
   if (!ready) return <Centered>Unsealing your messages…</Centered>;
 
   return (
-    <main className="flex flex-col h-dvh overflow-hidden select-none">
+    <main className="fixed inset-0 flex flex-col overflow-hidden select-none">
       {screenGuard && (
         <div className="fixed inset-0 z-[9999] backdrop-blur-3xl bg-white/90" />
       )}

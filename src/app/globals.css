@@ -9,7 +9,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 body {
   @apply font-sans text-ink-900 antialiased;
   background: radial-gradient(1200px 800px at 10% -10%, #f8e8ee 0%, transparent 60%),
