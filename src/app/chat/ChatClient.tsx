@@ -82,8 +82,10 @@ export function ChatClient({
 }
 
 function Bound({ me, peer }: { me: Me; peer: Peer }) {
-  const { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, markRead, react, setTyping } = useChat(me, peer);
+  const { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, editMessage, markRead, react, setTyping } = useChat(me, peer);
   const [screenGuard, setScreenGuard] = useState(false);
+  const [replyTo, setReplyTo] = useState<import('@/types').DecryptedMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<import('@/types').DecryptedMessage | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   // iOS VisualViewport fix: when the keyboard opens iOS auto-scrolls the page
@@ -165,9 +167,20 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
         peer={peer}
         peerTyping={peerTyping}
         onReact={react}
+        onReply={(m) => { setReplyTo(m); setEditingMessage(null); }}
+        onEdit={(m) => { setEditingMessage(m); setReplyTo(null); }}
         markRead={markRead}
       />
-      <MessageInput onSend={sendText} onSendImage={sendImage} onTyping={setTyping} />
+      <MessageInput
+        onSend={sendText}
+        onSendImage={sendImage}
+        onTyping={setTyping}
+        onEdit={editMessage}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+        editingMessage={editingMessage}
+        onCancelEdit={() => setEditingMessage(null)}
+      />
     </main>
   );
 }

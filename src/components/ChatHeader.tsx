@@ -36,8 +36,8 @@ export function ChatHeader({
         </div>
 
         <motion.span
-          className="text-xl leading-none select-none cursor-default"
-          animate={{ y: [0, -5, 0], scale: [1, 1.15, 1] }}
+          className="text-base leading-none select-none cursor-default"
+          animate={{ y: [0, -3, 0], scale: [1, 1.1, 1] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
         >
           💜

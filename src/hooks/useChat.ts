@@ -233,6 +233,11 @@ export function useChat(me: Me, peer: Peer) {
       ));
     });
 
+    ch.bind('message:edit', async (m: WireMessage) => {
+      const d = await decrypt(m);
+      setMessages((prev) => prev.map((msg) => msg._id === m._id ? { ...msg, ...d } : msg));
+    });
+
     ch.bind('typing', ({ from, isTyping }: { from: string; isTyping: boolean }) => {
       if (from !== me.id) setPeerTyping(isTyping);
     });
@@ -245,13 +250,14 @@ export function useChat(me: Me, peer: Peer) {
     };
   }, [ready, peer.publicKey, decrypt, me.id]);
 
-  const sendText = useCallback(async (text: string) => {
+  const sendText = useCallback(async (text: string, replyToId?: string | null) => {
     if (!privateKeyRef.current || !peer.publicKey) return;
     const clientId = crypto.randomUUID();
     const optimistic: DecryptedMessage = {
       _id: 'tmp-' + clientId,
       from: me.id, ciphertext: '', nonce: '', contentType: 'text',
       plaintext: text, pending: true, clientId, createdAt: new Date(),
+      replyToId: replyToId ?? null,
     };
     setMessages((p) => [...p, optimistic]);
 
@@ -259,13 +265,26 @@ export function useChat(me: Me, peer: Peer) {
     const res = await fetch('/api/messages/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...env, contentType: 'text', clientId }),
+      body: JSON.stringify({ ...env, contentType: 'text', clientId, replyToId: replyToId ?? null }),
     });
     if (!res.ok) {
       setMessages((p) => p.map((m) => m.clientId === clientId
         ? { ...m, failed: true, pending: false } : m));
     }
   }, [me.id, peer.publicKey]);
+
+  const editMessage = useCallback(async (id: string, newText: string) => {
+    if (!privateKeyRef.current || !peer.publicKey) return;
+    // Optimistic update
+    setMessages((p) => p.map((m) => m._id === id
+      ? { ...m, plaintext: newText, editedAt: new Date() } : m));
+    const env = await encryptText(newText, peer.publicKey, privateKeyRef.current);
+    await fetch('/api/messages/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ciphertext: env.ciphertext, nonce: env.nonce }),
+    });
+  }, [peer.publicKey]);
 
   const sendImage = useCallback(async (file: File) => {
     if (!privateKeyRef.current || !peer.publicKey) return;
@@ -343,5 +362,5 @@ export function useChat(me: Me, peer: Peer) {
     }).catch(() => {});
   }, []);
 
-  return { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, markRead, react, setTyping };
+  return { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, editMessage, markRead, react, setTyping };
 }

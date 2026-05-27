@@ -35,6 +35,8 @@ export async function GET(req: Request) {
     reactions: d.reactions ? Object.fromEntries(d.reactions instanceof Map ? d.reactions : Object.entries(d.reactions)) : {},
     readAt: d.readAt,
     createdAt: d.createdAt,
+    replyToId: d.replyToId ?? null,
+    editedAt: d.editedAt ?? null,
   }));
   return NextResponse.json({ messages });
 }

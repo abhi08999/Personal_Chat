@@ -6,10 +6,12 @@ import { TypingDots } from './TypingDots';
 import type { DecryptedMessage, Me, Peer } from '@/types';
 
 export function MessageList({
-  messages, historyLoaded, me, peer, peerTyping, onReact, markRead,
+  messages, historyLoaded, me, peer, peerTyping, onReact, onReply, onEdit, markRead,
 }: {
   messages: DecryptedMessage[]; historyLoaded: boolean; me: Me; peer: Peer; peerTyping: boolean;
   onReact: (id: string, emoji: string) => void;
+  onReply: (m: DecryptedMessage) => void;
+  onEdit: (m: DecryptedMessage) => void;
   markRead: (ids: string[]) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -104,6 +106,9 @@ export function MessageList({
                 peerId={peer.id}
                 onReact={onReact}
                 onOpenImage={openLightbox}
+                onReply={onReply}
+                onEdit={onEdit}
+                replyToMessage={m.replyToId ? messages.find((x) => x._id === m.replyToId) : undefined}
               />
             ))}
           </div>

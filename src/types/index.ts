@@ -27,6 +27,8 @@ export type WireMessage = {
   reactions?: Record<string, string>;
   readAt?: string | Date | null;
   createdAt: string | Date;
+  replyToId?: string | null;
+  editedAt?: string | Date | null;
 };
 
 export type DecryptedMessage = WireMessage & {

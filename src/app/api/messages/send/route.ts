@@ -29,6 +29,7 @@ const Body = z.object({
   mediaKeyCiphertext: z.string().max(4096).nullable().optional(),
   mediaKeyNonce: z.string().max(512).nullable().optional(),
   clientId: z.string().max(128).nullable().optional(),
+  replyToId: z.string().max(128).nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
     mediaKeyNonce: body.mediaKeyNonce ?? null,
     clientId: body.clientId ?? null,
     senderPublicKey: me.publicKey ?? null,
+    replyToId: body.replyToId ?? null,
     createdAt: new Date(),
   });
 
@@ -67,6 +69,8 @@ export async function POST(req: Request) {
     clientId: doc.clientId,
     senderPublicKey: doc.senderPublicKey,
     createdAt: doc.createdAt,
+    replyToId: doc.replyToId ?? null,
+    editedAt: null,
     reactions: {},
     readAt: null,
   };
