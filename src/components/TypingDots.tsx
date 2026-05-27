@@ -1,6 +1,6 @@
 export function TypingDots() {
   return (
-    <div className="bg-white border border-blush-200/60 rounded-3xl rounded-bl-md px-4 py-3 shadow-bubble flex items-end gap-1">
+    <div className="bg-white dark:bg-ink-800 border border-blush-200/60 dark:border-ink-700/40 rounded-3xl rounded-bl-md px-4 py-3 shadow-bubble flex items-end gap-1">
       <Dot delay="0s" /><Dot delay=".15s" /><Dot delay=".3s" />
     </div>
   );

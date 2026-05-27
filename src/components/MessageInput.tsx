@@ -1,10 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-// import { AnimatePresence } from 'framer-motion';
-// import { Camera } from 'lucide-react';
-// import { CameraCapture } from './CameraCapture';
 import { ImagePlus, Send, Smile, X } from 'lucide-react';
+import { useTheme } from './ThemeProvider';
 const Picker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 export function MessageInput({
@@ -16,11 +14,11 @@ export function MessageInput({
 }) {
   const [text, setText] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
-  // const [showCamera, setShowCamera] = useState(false);
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const typingTimer = useRef<any>(null);
   const emojiOverlayRef = useRef(false);
+  const { theme } = useTheme();
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url); }, [preview]);
 
@@ -89,37 +87,27 @@ export function MessageInput({
   }
 
   return (
-    <div className="shrink-0 z-10 backdrop-blur-2xl bg-white/75 border-t border-blush-200/50">
+    <div className="shrink-0 z-10 backdrop-blur-2xl bg-white/75 dark:bg-ink-900/85 border-t border-blush-200/50 dark:border-ink-700/30">
       <div className="max-w-3xl mx-auto px-3 sm:px-5 py-3" style={{ paddingBottom: 'calc(0.75rem + var(--safe-bottom))' }}>
         {preview && (
-          <div className="mb-2 inline-flex items-center gap-2 bg-white rounded-2xl border border-blush-200/60 p-2 shadow-bubble">
+          <div className="mb-2 inline-flex items-center gap-2 bg-white dark:bg-ink-800 rounded-2xl border border-blush-200/60 dark:border-ink-700/40 p-2 shadow-bubble">
             <img src={preview.url} className="w-14 h-14 rounded-xl object-cover" />
-            <button onClick={() => { URL.revokeObjectURL(preview.url); setPreview(null); }} className="p-1 rounded-full hover:bg-blush-100">
-              <X className="w-4 h-4" />
+            <button onClick={() => { URL.revokeObjectURL(preview.url); setPreview(null); }} className="p-1 rounded-full hover:bg-blush-100 dark:hover:bg-ink-700/50">
+              <X className="w-4 h-4 dark:text-white/70" />
             </button>
           </div>
         )}
-        <div className="flex items-end gap-2 bg-white rounded-3xl border border-blush-200/70 px-2 py-1.5 shadow-bubble focus-within:border-lavender-500 focus-within:ring-4 focus-within:ring-lavender-300/30 transition">
+        <div className="flex items-end gap-2 bg-white dark:bg-ink-800/60 rounded-3xl border border-blush-200/70 dark:border-ink-700/40 px-2 py-1.5 shadow-bubble focus-within:border-lavender-500 dark:focus-within:border-lavender-600 focus-within:ring-4 focus-within:ring-lavender-300/30 dark:focus-within:ring-lavender-700/20 transition">
           {/* Gallery picker */}
           <button
             type="button"
             onClick={() => document.getElementById('img-input')?.click()}
-            className="p-2 rounded-2xl hover:bg-blush-100 text-ink-700/70"
+            className="p-2 rounded-2xl hover:bg-blush-100 dark:hover:bg-ink-700/50 text-ink-700/70 dark:text-white/60"
             aria-label="Send image from gallery"
           >
             <ImagePlus className="w-5 h-5" />
           </button>
           <input id="img-input" type="file" accept="image/*" hidden onChange={(e) => pickImage(e.target.files?.[0] || undefined)} />
-
-          {/* Camera with filters — TODO: re-enable when ready */}
-          {/* <button
-            type="button"
-            onClick={() => setShowCamera(true)}
-            className="p-2 rounded-2xl hover:bg-blush-100 text-ink-700/70"
-            aria-label="Take photo"
-          >
-            <Camera className="w-5 h-5" />
-          </button> */}
 
           <textarea
             ref={taRef}
@@ -128,13 +116,13 @@ export function MessageInput({
             onKeyDown={onKey}
             rows={1}
             placeholder="Message…"
-            className="flex-1 resize-none bg-transparent outline-none py-2 px-1 text-[15px] placeholder:text-ink-700/30 max-h-44"
+            className="flex-1 resize-none bg-transparent outline-none py-2 px-1 text-[15px] text-ink-900 dark:text-white placeholder:text-ink-700/30 dark:placeholder:text-white/25 max-h-44"
           />
 
           <button
             type="button"
             onClick={() => showEmoji ? closeEmojiPicker() : openEmojiPicker()}
-            className="p-2 rounded-2xl hover:bg-blush-100 text-ink-700/70"
+            className="p-2 rounded-2xl hover:bg-blush-100 dark:hover:bg-ink-700/50 text-ink-700/70 dark:text-white/60"
             aria-label="Emoji"
           >
             <Smile className="w-5 h-5" />
@@ -160,6 +148,7 @@ export function MessageInput({
                   closeEmojiPicker();
                   requestAnimationFrame(autoResize);
                 }}
+                theme={theme as any}
                 width={320}
                 height={360}
                 lazyLoadEmojis
@@ -168,15 +157,6 @@ export function MessageInput({
           </div>
         )}
       </div>
-
-      {/* <AnimatePresence>
-        {showCamera && (
-          <CameraCapture
-            onCapture={(file) => { pickImage(file); setShowCamera(false); }}
-            onClose={() => setShowCamera(false)}
-          />
-        )}
-      </AnimatePresence> */}
     </div>
   );
 }

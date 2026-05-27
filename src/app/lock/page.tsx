@@ -89,7 +89,7 @@ export default function LockScreen() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-[28px] bg-white/70 backdrop-blur-2xl border border-white/60 shadow-soft p-8 sm:p-10"
+          className="rounded-[28px] bg-white/70 dark:bg-ink-900/75 backdrop-blur-2xl border border-white/60 dark:border-ink-700/30 shadow-soft p-8 sm:p-10"
         >
           <div className="flex flex-col items-center text-center">
             <motion.div
@@ -99,10 +99,10 @@ export default function LockScreen() {
             >
               <Heart className="w-7 h-7 text-white" fill="white" />
             </motion.div>
-            <h1 className="mt-5 font-display text-4xl tracking-tight text-ink-900">
+            <h1 className="mt-5 font-display text-4xl tracking-tight text-ink-900 dark:text-white">
               @bhi <span className="text-lavender-600">&amp;</span> Mommy
             </h1>
-            <p className="mt-2 text-sm text-ink-700/70">A private space for two.</p>
+            <p className="mt-2 text-sm text-ink-700/70 dark:text-white/55">A private space for two.</p>
           </div>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-3">
@@ -111,7 +111,7 @@ export default function LockScreen() {
                 value={handle}
                 onChange={(e) => onHandleChange(e.target.value)}
                 required
-                className="w-full bg-transparent outline-none text-ink-900"
+                className="w-full bg-transparent outline-none text-ink-900 dark:text-white"
               >
                 <option value="">Choose…</option>
                 <option value="abhi">@bhi</option>
@@ -127,7 +127,7 @@ export default function LockScreen() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full bg-transparent outline-none text-ink-900 placeholder:text-ink-700/30"
+                className="w-full bg-transparent outline-none text-ink-900 dark:text-white placeholder:text-ink-700/30 dark:placeholder:text-white/25"
               />
             </Field>
 
@@ -155,7 +155,7 @@ export default function LockScreen() {
             </button>
           </form>
 
-          <p className="mt-6 text-[11px] text-center text-ink-700/50">
+          <p className="mt-6 text-[11px] text-center text-ink-700/50 dark:text-white/40">
             End-to-end encrypted. Even the server can&apos;t read us.
           </p>
         </motion.div>
@@ -166,8 +166,8 @@ export default function LockScreen() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block rounded-2xl bg-white/70 border border-blush-200/60 px-4 py-3 focus-within:border-lavender-500 focus-within:ring-4 focus-within:ring-lavender-300/30 transition">
-      <span className="block text-[11px] uppercase tracking-[0.14em] text-ink-700/50 mb-1">{label}</span>
+    <label className="block rounded-2xl bg-white/70 dark:bg-ink-800/60 border border-blush-200/60 dark:border-ink-700/40 px-4 py-3 focus-within:border-lavender-500 focus-within:ring-4 focus-within:ring-lavender-300/30 dark:focus-within:ring-lavender-700/20 transition">
+      <span className="block text-[11px] uppercase tracking-[0.14em] text-ink-700/50 dark:text-white/40 mb-1">{label}</span>
       {children}
     </label>
   );

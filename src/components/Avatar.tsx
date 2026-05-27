@@ -13,7 +13,7 @@ export function Avatar({ name, size = 40, online }: { name: string; size?: numbe
       {online !== undefined && (
         <span
           className={cn(
-            'absolute -bottom-0.5 -right-0.5 rounded-full ring-2 ring-white',
+            'absolute -bottom-0.5 -right-0.5 rounded-full ring-2 ring-white dark:ring-ink-900',
             online ? 'bg-emerald-400' : 'bg-ink-700/30'
           )}
           style={{ width: size * 0.28, height: size * 0.28 }}

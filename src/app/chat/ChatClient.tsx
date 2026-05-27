@@ -82,7 +82,7 @@ export function ChatClient({
 }
 
 function Bound({ me, peer }: { me: Me; peer: Peer }) {
-  const { messages, online, peerTyping, ready, sendText, sendImage, markRead, react, setTyping } = useChat(me, peer);
+  const { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, markRead, react, setTyping } = useChat(me, peer);
   const [screenGuard, setScreenGuard] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -155,11 +155,12 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
   return (
     <main ref={mainRef} className="fixed left-0 right-0 flex flex-col overflow-hidden select-none" style={{ top: 0, height: '100dvh' }}>
       {screenGuard && (
-        <div className="fixed inset-0 z-[9999] backdrop-blur-3xl bg-white/90" />
+        <div className="fixed inset-0 z-[9999] backdrop-blur-3xl bg-white/90 dark:bg-ink-900/90" />
       )}
       <ChatHeader peerName={peer.displayName} peerHandle={peer.handle} online={online.has(peer.id)} peerTyping={peerTyping} />
       <MessageList
         messages={messages}
+        historyLoaded={historyLoaded}
         me={me}
         peer={peer}
         peerTyping={peerTyping}
@@ -184,7 +185,7 @@ function Centered({ children }: { children: React.ReactNode }) {
     <main className="min-h-dvh grid place-items-center px-6 text-center">
       <div>
         <Loader2 className="w-6 h-6 mx-auto animate-spin text-lavender-600" />
-        <p className="mt-3 text-ink-700/70 text-sm">{children}</p>
+        <p className="mt-3 text-ink-700/70 dark:text-white/60 text-sm">{children}</p>
       </div>
     </main>
   );

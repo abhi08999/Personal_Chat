@@ -65,6 +65,7 @@ export function useChat(me: Me, peer: Peer) {
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [peerTyping, setPeerTyping] = useState(false);
   const [ready, setReady] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const privateKeyRef = useRef<Uint8Array | null>(null);
   const channelRef = useRef<PresenceChannel | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -181,7 +182,7 @@ export function useChat(me: Me, peer: Peer) {
       const res = await fetch('/api/messages?limit=50');
       const { messages: hist } = await res.json();
       const dec = await Promise.all((hist as WireMessage[]).map(decrypt));
-      if (alive) setMessages(dec);
+      if (alive) { setMessages(dec); setHistoryLoaded(true); }
     })();
 
     const pusher = getPusher();
@@ -342,5 +343,5 @@ export function useChat(me: Me, peer: Peer) {
     }).catch(() => {});
   }, []);
 
-  return { messages, online, peerTyping, ready, sendText, sendImage, markRead, react, setTyping };
+  return { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, markRead, react, setTyping };
 }

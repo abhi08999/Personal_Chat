@@ -8,6 +8,9 @@
   color-scheme: light;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
+.dark {
+  color-scheme: dark;
+}
 
 html, body { height: 100%; overflow: hidden; }
 body {
@@ -17,11 +20,19 @@ body {
               linear-gradient(180deg, #fdf5f8 0%, #f6e7ee 100%);
   background-attachment: fixed;
 }
+.dark body {
+  @apply text-white;
+  background: radial-gradient(1200px 800px at 10% -10%, rgba(155,114,207,0.12) 0%, transparent 60%),
+              radial-gradient(1000px 700px at 110% 10%, rgba(126,91,176,0.1) 0%, transparent 55%),
+              linear-gradient(180deg, #1a0f1a 0%, #2a1a2e 100%);
+}
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(155, 114, 207, 0.25); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(155, 114, 207, 0.45); }
+.dark ::-webkit-scrollbar-thumb { background: rgba(155, 114, 207, 0.15); }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(155, 114, 207, 0.3); }
 
 .message-link { @apply underline decoration-lavender-600/50 underline-offset-2 hover:decoration-lavender-600; }
 
@@ -36,6 +47,12 @@ body {
   filter: blur(40px);
   z-index: 0;
   animation: aurora 18s ease-in-out infinite alternate;
+}
+.dark .aurora::before {
+  background:
+    radial-gradient(600px 400px at 20% 30%, rgba(155,114,207,0.3), transparent 60%),
+    radial-gradient(500px 400px at 80% 70%, rgba(126,91,176,0.25), transparent 60%),
+    radial-gradient(700px 500px at 50% 100%, rgba(100,70,160,0.2), transparent 60%);
 }
 @keyframes aurora {
   0% { transform: translate3d(0,0,0) scale(1); }
