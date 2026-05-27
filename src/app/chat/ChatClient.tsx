@@ -108,11 +108,33 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
     };
   }, []);
 
-  // Request notification permission once (used for decoy notifications)
+  // Register Service Worker + subscribe to Web Push so notifications arrive
+  // even when the browser is closed / phone screen is locked.
   useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidKey) return;
+
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey),
+          });
+        }
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub),
+        });
+      } catch { /* SW not supported or permission denied */ }
+    })();
   }, []);
 
   // Blur content when tab loses focus (deters screen recording / shoulder surfing)
@@ -147,6 +169,14 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
       <MessageInput onSend={sendText} onSendImage={sendImage} onTyping={setTyping} />
     </main>
   );
+}
+
+// Convert URL-safe base64 VAPID public key to Uint8Array for PushManager.subscribe()
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
 function Centered({ children }: { children: React.ReactNode }) {

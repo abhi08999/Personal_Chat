@@ -5,6 +5,7 @@ import type { PresenceChannel } from 'pusher-js';
 import {
   sodiumReady, encryptText, decryptText, openPrivateKeyWithPassword,
   loadSealedPrivateKey, wipeSealedPrivateKey, encryptBytesForPeer, decryptBytesFromPeer,
+  derivePublicKey,
 } from '@/lib/crypto/e2ee';
 import type { DecryptedMessage, Me, Peer, WireMessage } from '@/types';
 
@@ -79,6 +80,22 @@ export function useChat(me: Me, peer: Peer) {
       try {
         const sk = await openPrivateKeyWithPassword(sealed, pw);
         if (!alive) return;
+        // Safety net: ensure the server has the public key that matches THIS private key.
+        // If ensureKeys on the lock page had a timing issue or the key rotated on another
+        // device, this re-registers the correct public key so senderPublicKey in sent
+        // messages always matches the private key actually used for encryption.
+        try {
+          const derivedPub = await derivePublicKey(sk);
+          const keyRes = await fetch('/api/keys');
+          const keyJson = await keyRes.json();
+          if (keyJson.publicKey !== derivedPub) {
+            await fetch('/api/keys', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ publicKey: derivedPub }),
+            });
+          }
+        } catch { /* non-critical, continue */ }
         privateKeyRef.current = sk;
         setReady(true);
       } catch {
@@ -100,41 +117,57 @@ export function useChat(me: Me, peer: Peer) {
   // because closing the tab before the other person reads would wipe their messages.
 
   const decrypt = useCallback(async (m: WireMessage): Promise<DecryptedMessage> => {
-    if (!privateKeyRef.current) {
-      return { ...m, failed: true };
+    if (!privateKeyRef.current) return { ...m, failed: true };
+    const mysk = privateKeyRef.current;
+
+    // Build ordered list of public keys to try.
+    // For my own echoed messages: peer's key for DH (symmetric property of crypto_box).
+    // For received messages: prefer the key embedded at send time (senderPublicKey) so
+    // key rotation doesn't break decryption; fall back to current peer key.
+    const candidates: string[] = [];
+    if (m.from === me.id) {
+      if (peer.publicKey) candidates.push(peer.publicKey);
+    } else {
+      if (m.senderPublicKey) candidates.push(m.senderPublicKey);
+      if (peer.publicKey && peer.publicKey !== m.senderPublicKey) candidates.push(peer.publicKey);
     }
-    // NaCl DH: shared secret = DH(otherParty_pub, my_sk).
-    // When decrypting a message I sent (echo): other party = peer → use peer.publicKey.
-    // When decrypting a message the peer sent: use the public key they embedded in the
-    // message (senderPublicKey), which is their key at send time — not a stale server copy.
-    const otherPub = m.from === me.id
-      ? peer.publicKey
-      : (m.senderPublicKey || peer.publicKey);
-    if (!otherPub) return { ...m, failed: true };
-    try {
+    if (!candidates.length) return { ...m, failed: true };
+
+    async function tryDecrypt(pub: string): Promise<DecryptedMessage> {
       if (m.contentType === 'text') {
-        const text = await decryptText(m.ciphertext, m.nonce, otherPub, privateKeyRef.current);
+        const text = await decryptText(m.ciphertext, m.nonce, pub, mysk);
         return { ...m, plaintext: text };
-      } else if (m.contentType === 'image' && m.mediaUrl && m.mediaKeyNonce) {
+      }
+      if (m.contentType === 'image' && m.mediaUrl && m.mediaKeyNonce) {
         const res = await fetch(m.mediaUrl, { mode: 'cors' });
         if (!res.ok) throw new Error(`blob fetch ${res.status}`);
         const ct = new Uint8Array(await res.arrayBuffer());
         const bytes = await decryptBytesFromPeer(
-          ct,
-          m.mediaNonce!,
-          m.mediaKeyCiphertext!,
-          m.mediaKeyNonce,
-          otherPub,
-          privateKeyRef.current,
+          ct, m.mediaNonce!, m.mediaKeyCiphertext!, m.mediaKeyNonce, pub, mysk,
         );
         const url = URL.createObjectURL(new Blob([bytes]));
         objectUrlsRef.current.push(url);
         return { ...m, imageObjectUrl: url, plaintext: '' };
       }
       return m as DecryptedMessage;
-    } catch {
-      return { ...m, failed: true };
     }
+
+    // Try each candidate key
+    for (const pub of candidates) {
+      try { return await tryDecrypt(pub); } catch { /* next */ }
+    }
+
+    // All local keys failed — fetch a fresh peer key from the server and try once more
+    try {
+      const r = await fetch('/api/keys/peer');
+      const j = await r.json();
+      const freshPub: string | null = j?.peer?.publicKey ?? null;
+      if (freshPub && !candidates.includes(freshPub)) {
+        try { return await tryDecrypt(freshPub); } catch { /* still failed */ }
+      }
+    } catch { /* network error */ }
+
+    return { ...m, failed: true };
   }, [peer.publicKey, me.id]);
 
   // Load history and subscribe to Pusher

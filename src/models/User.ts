@@ -6,6 +6,7 @@ const UserSchema = new Schema({
   passwordHash: { type: String, required: true },
   publicKey: { type: String, default: null }, // base64 X25519 pub key
   sealedPrivateKey: { type: Object, default: null }, // optional cloud-escrow (off by default)
+  pushSubscription: { type: Object, default: null }, // Web Push subscription object
   createdAt: { type: Date, default: Date.now },
 });
 
