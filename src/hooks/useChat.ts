@@ -52,10 +52,12 @@ function playPing() {
 }
 
 function fireDecoyNotification() {
-  playPing();
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  const d = DECOYS[Math.floor(Math.random() * DECOYS.length)];
-  new Notification(d.title, { body: d.body, silent: true }); // sound handled by playPing
+  try { playPing(); } catch { /* audio blocked */ }
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const d = DECOYS[Math.floor(Math.random() * DECOYS.length)];
+    new Notification(d.title, { body: d.body, silent: true });
+  } catch { /* notification blocked or not supported */ }
 }
 
 export function useChat(me: Me, peer: Peer) {
