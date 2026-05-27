@@ -1,7 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { Check, CheckCheck, Loader2, AlertCircle, CornerUpLeft, Pencil } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LinkText } from './LinkText';
 import { cn } from '@/lib/utils';
 import type { DecryptedMessage } from '@/types';
@@ -19,8 +19,21 @@ export function MessageBubble({
   replyToMessage?: DecryptedMessage;
 }) {
   const [showActions, setShowActions] = useState(false);
-  const [swipeDelta, setSwipeDelta] = useState(0);
+  const [swipeDelta, setSwipeDeltaState] = useState(0);
 
+  // Use refs so the non-passive native listener always reads fresh values
+  const swipeDeltaRef = useRef(0);
+  const mRef = useRef(m);
+  mRef.current = m;
+  const onReplyRef = useRef(onReply);
+  onReplyRef.current = onReply;
+
+  function setSwipeDelta(v: number) {
+    swipeDeltaRef.current = v;
+    setSwipeDeltaState(v);
+  }
+
+  const outerRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout>>();
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -33,43 +46,53 @@ export function MessageBubble({
   const myReaction = Object.entries(reactions).find(([uid]) => uid !== peerId)?.[1];
   const canEdit = isMine && m.contentType === 'text' && !m.pending && !m.failed;
 
-  // ── Touch handlers ──────────────────────────────────────────────
+  // Non-passive touchmove so we can call preventDefault() to stop scroll
+  // during a horizontal swipe — React's synthetic onTouchMove is passive on
+  // some mobile browsers and cannot prevent the scroll container from taking over.
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+
+    function onMove(e: TouchEvent) {
+      const dx = e.touches[0].clientX - touchStartX.current;
+      const dy = e.touches[0].clientY - touchStartY.current;
+
+      if (!swipeDir.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        swipeDir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+        if (swipeDir.current === 'h') clearTimeout(longPressTimer.current);
+      }
+
+      const cur = mRef.current;
+      if (swipeDir.current === 'h' && dx > 0 && !cur.pending && !cur.failed) {
+        e.preventDefault(); // stop scroll container from stealing the gesture
+        const clamped = Math.min(dx, 80);
+        setSwipeDelta(clamped);
+        if (!swipeTriggered.current && clamped >= SWIPE_THRESHOLD) {
+          swipeTriggered.current = true;
+          try { (navigator as any).vibrate?.(12); } catch {}
+        } else if (clamped < SWIPE_THRESHOLD) {
+          swipeTriggered.current = false;
+        }
+      }
+    }
+
+    el.addEventListener('touchmove', onMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onMove);
+  }, []); // empty — refs keep everything fresh
+
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     swipeDir.current = null;
     swipeTriggered.current = false;
     longPressTimer.current = setTimeout(() => {
-      if (!m.pending && !m.failed) setShowActions(true);
+      if (!mRef.current.pending && !mRef.current.failed) setShowActions(true);
     }, 480);
-  }
-
-  function onTouchMove(e: React.TouchEvent) {
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - touchStartY.current;
-
-    // Determine swipe axis on first significant movement
-    if (!swipeDir.current && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      swipeDir.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-      if (swipeDir.current === 'h') clearTimeout(longPressTimer.current);
-    }
-
-    if (swipeDir.current === 'h' && dx > 0 && !m.pending && !m.failed) {
-      const clamped = Math.min(dx, 80);
-      setSwipeDelta(clamped);
-      // Haptic tick at threshold
-      if (!swipeTriggered.current && clamped >= SWIPE_THRESHOLD) {
-        swipeTriggered.current = true;
-        try { (navigator as any).vibrate?.(12); } catch {}
-      } else if (clamped < SWIPE_THRESHOLD) {
-        swipeTriggered.current = false;
-      }
-    }
   }
 
   function onTouchEnd() {
     clearTimeout(longPressTimer.current);
-    if (swipeDelta >= SWIPE_THRESHOLD) onReply(m);
+    if (swipeDeltaRef.current >= SWIPE_THRESHOLD) onReplyRef.current(mRef.current);
     setSwipeDelta(0);
     swipeDir.current = null;
     swipeTriggered.current = false;
@@ -80,7 +103,6 @@ export function MessageBubble({
     fn();
   }
 
-  // ── Render ───────────────────────────────────────────────────────
   return (
     <motion.div
       initial={{ opacity: 0, y: 6, scale: 0.98 }}
@@ -88,20 +110,21 @@ export function MessageBubble({
       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       className={cn('group flex w-full', isMine ? 'justify-end' : 'justify-start')}
     >
-      {/* Tap-outside overlay to close action bar on mobile */}
       {showActions && (
         <div className="fixed inset-0 z-10" onClick={() => setShowActions(false)} />
       )}
 
       <div
+        ref={outerRef}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
         className={cn('relative max-w-[78%] sm:max-w-[68%] z-20', isMine ? 'items-end' : 'items-start')}
         style={{
           transform: `translateX(${swipeDelta}px)`,
           transition: swipeDelta === 0 ? 'transform 0.3s cubic-bezier(0.22,1,0.36,1)' : 'none',
-          touchAction: 'pan-y',
         }}
       >
-        {/* Swipe-to-reply icon — revealed as bubble slides right */}
+        {/* Reply icon revealed as bubble slides right */}
         {swipeDelta > 4 && (
           <div
             className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 pr-2.5 pointer-events-none"
@@ -118,7 +141,7 @@ export function MessageBubble({
           </div>
         )}
 
-        {/* Desktop hover / mobile long-press action bar */}
+        {/* Hover/long-press action bar */}
         {showActions && !m.pending && !m.failed && (
           <div className={cn(
             'absolute -top-11 flex items-center gap-0.5 bg-white dark:bg-ink-800 shadow-soft rounded-full px-2 py-1.5 border border-blush-200/60 dark:border-ink-700/40 z-30',
@@ -155,9 +178,6 @@ export function MessageBubble({
         <div
           onMouseEnter={() => { if (!m.pending && !m.failed) setShowActions(true); }}
           onMouseLeave={() => setShowActions(false)}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
           onDoubleClick={() => { if (!m.pending && !m.failed) { onReact(m._id, '❤️'); setShowActions(false); } }}
           className={cn(
             'relative px-4 py-2.5 rounded-3xl shadow-bubble break-words whitespace-pre-wrap leading-relaxed text-[15px] cursor-default select-none',
@@ -166,7 +186,7 @@ export function MessageBubble({
               : 'bg-gradient-bubble-them dark:bg-none dark:bg-ink-800 text-ink-900 dark:text-white border border-blush-200/60 dark:border-ink-700/30 rounded-bl-md',
           )}
         >
-          {/* Reply quote block */}
+          {/* Reply quote */}
           {replyToMessage && (
             <div className={cn(
               'mb-2 px-3 py-1.5 rounded-xl text-[12px] border-l-2',
@@ -182,13 +202,10 @@ export function MessageBubble({
               </div>
             </div>
           )}
-          {/* Deleted reply stub */}
           {m.replyToId && !replyToMessage && (
             <div className={cn(
               'mb-2 px-3 py-1.5 rounded-xl text-[12px] border-l-2 opacity-40 italic',
-              isMine
-                ? 'bg-white/10 border-white/30'
-                : 'bg-blush-50 dark:bg-ink-700/30 border-blush-300 dark:border-ink-600',
+              isMine ? 'bg-white/10 border-white/30' : 'bg-blush-50 dark:bg-ink-700/30 border-blush-300 dark:border-ink-600',
             )}>
               Original message no longer available
             </div>
@@ -205,7 +222,6 @@ export function MessageBubble({
           )}
         </div>
 
-        {/* Reactions */}
         {(peerReaction || myReaction) && (
           <div className={cn('flex gap-1 mt-1', isMine ? 'justify-end' : 'justify-start')}>
             {myReaction && <span className="bg-white/80 dark:bg-ink-800/80 border border-blush-200/60 dark:border-ink-700/30 rounded-full px-1.5 py-0.5 text-xs shadow-bubble">{myReaction}</span>}
@@ -213,7 +229,6 @@ export function MessageBubble({
           </div>
         )}
 
-        {/* Timestamp + status */}
         <div className={cn('mt-1 flex items-center gap-1 text-[10px] text-ink-700/50 dark:text-white/35', isMine ? 'justify-end' : 'justify-start')}>
           <span>{time}</span>
           {m.editedAt && <span className="italic opacity-70">edited</span>}
