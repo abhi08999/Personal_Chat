@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     mediaKeyCiphertext: body.mediaKeyCiphertext ?? null,
     mediaKeyNonce: body.mediaKeyNonce ?? null,
     clientId: body.clientId ?? null,
+    senderPublicKey: me.publicKey ?? null,
     createdAt: new Date(),
   });
 
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
     mediaKeyCiphertext: doc.mediaKeyCiphertext,
     mediaKeyNonce: doc.mediaKeyNonce,
     clientId: doc.clientId,
+    senderPublicKey: doc.senderPublicKey,
     createdAt: doc.createdAt,
     reactions: {},
     readAt: null,

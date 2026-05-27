@@ -31,6 +31,7 @@ export async function GET(req: Request) {
     mediaKeyCiphertext: d.mediaKeyCiphertext,
     mediaKeyNonce: d.mediaKeyNonce,
     clientId: d.clientId,
+    senderPublicKey: d.senderPublicKey ?? null,
     reactions: d.reactions ? Object.fromEntries(d.reactions instanceof Map ? d.reactions : Object.entries(d.reactions)) : {},
     readAt: d.readAt,
     createdAt: d.createdAt,

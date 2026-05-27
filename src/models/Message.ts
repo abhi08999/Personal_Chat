@@ -10,6 +10,7 @@ const MessageSchema = new Schema({
   mediaKeyCiphertext: { type: String, default: null },
   mediaKeyNonce: { type: String, default: null },
   clientId: { type: String, default: null }, // for optimistic dedup
+  senderPublicKey: { type: String, default: null }, // used by receiver to decrypt
   reactions: { type: Map, of: String, default: {} },
   // TTL: deleted 12 hours after the receiver marks it read
   readAt: { type: Date, default: null, expires: 43200 },

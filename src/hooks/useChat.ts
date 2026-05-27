@@ -8,6 +8,55 @@ import {
 } from '@/lib/crypto/e2ee';
 import type { DecryptedMessage, Me, Peer, WireMessage } from '@/types';
 
+// Decoy notifications — disguised as generic company alerts so no one knows
+// what this app actually is.
+const DECOYS = [
+  { title: 'HDFC Bank', body: 'OTP 638271 for your transaction. Valid 10 min. Do not share.' },
+  { title: 'Nykaa', body: 'Items in your wishlist are almost sold out! Shop now 🛍️' },
+  { title: 'Amazon', body: 'Your package is out for delivery today.' },
+  { title: 'Flipkart', body: 'Exclusive deal! Extra 20% off your next order. Tap to claim.' },
+  { title: 'SBI Bank', body: 'Your account statement for this month is now available.' },
+  { title: 'Zomato', body: 'Your order is on the way! ETA: 22 mins 🍕' },
+  { title: 'Myntra', body: 'Your wishlist item just came back in stock!' },
+  { title: 'ICICI Bank', body: 'Credit card payment of ₹2,499 due in 3 days.' },
+  { title: 'PharmEasy', body: 'Reminder: time to reorder your medicines. Free delivery today!' },
+  { title: 'Swiggy', body: 'Special offer near you — free delivery on next 3 orders 🎉' },
+];
+
+// Soft two-tone chime (no audio file needed — generated via Web Audio API)
+function playPing() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    function tone(freq: number, startAt: number, duration: number, vol: number) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0, ctx.currentTime + startAt);
+      g.gain.linearRampToValueAtTime(vol, ctx.currentTime + startAt + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startAt + duration);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(ctx.currentTime + startAt);
+      osc.stop(ctx.currentTime + startAt + duration);
+    }
+
+    tone(880, 0,    0.18, 0.18); // high A
+    tone(1174, 0.12, 0.22, 0.13); // D above
+    setTimeout(() => ctx.close(), 600);
+  } catch { /* AudioContext not available */ }
+}
+
+function fireDecoyNotification() {
+  playPing();
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const d = DECOYS[Math.floor(Math.random() * DECOYS.length)];
+  new Notification(d.title, { body: d.body, silent: true }); // sound handled by playPing
+}
+
 export function useChat(me: Me, peer: Peer) {
   const [messages, setMessages] = useState<DecryptedMessage[]>([]);
   const [online, setOnline] = useState<Set<string>>(new Set());
@@ -51,14 +100,20 @@ export function useChat(me: Me, peer: Peer) {
   // because closing the tab before the other person reads would wipe their messages.
 
   const decrypt = useCallback(async (m: WireMessage): Promise<DecryptedMessage> => {
-    if (!privateKeyRef.current || !peer.publicKey) {
+    if (!privateKeyRef.current) {
       return { ...m, failed: true };
     }
-    // NaCl crypto_box DH: shared secret = DH(mySK, peerPK) regardless of who sent the message
-    const peerPub = peer.publicKey;
+    // NaCl DH: shared secret = DH(otherParty_pub, my_sk).
+    // When decrypting a message I sent (echo): other party = peer → use peer.publicKey.
+    // When decrypting a message the peer sent: use the public key they embedded in the
+    // message (senderPublicKey), which is their key at send time — not a stale server copy.
+    const otherPub = m.from === me.id
+      ? peer.publicKey
+      : (m.senderPublicKey || peer.publicKey);
+    if (!otherPub) return { ...m, failed: true };
     try {
       if (m.contentType === 'text') {
-        const text = await decryptText(m.ciphertext, m.nonce, peerPub, privateKeyRef.current);
+        const text = await decryptText(m.ciphertext, m.nonce, otherPub, privateKeyRef.current);
         return { ...m, plaintext: text };
       } else if (m.contentType === 'image' && m.mediaUrl && m.mediaKeyNonce) {
         const res = await fetch(m.mediaUrl, { mode: 'cors' });
@@ -69,7 +124,7 @@ export function useChat(me: Me, peer: Peer) {
           m.mediaNonce!,
           m.mediaKeyCiphertext!,
           m.mediaKeyNonce,
-          peerPub,
+          otherPub,
           privateKeyRef.current,
         );
         const url = URL.createObjectURL(new Blob([bytes]));
@@ -80,7 +135,7 @@ export function useChat(me: Me, peer: Peer) {
     } catch {
       return { ...m, failed: true };
     }
-  }, [peer.publicKey]);
+  }, [peer.publicKey, me.id]);
 
   // Load history and subscribe to Pusher
   useEffect(() => {
@@ -109,6 +164,7 @@ export function useChat(me: Me, peer: Peer) {
     });
 
     ch.bind('message:new', async (m: WireMessage) => {
+      if (m.from !== me.id) fireDecoyNotification();
       const d = await decrypt(m);
       setMessages((prev) => {
         const idx = m.clientId ? prev.findIndex((x) => x.clientId === m.clientId && x.pending) : -1;

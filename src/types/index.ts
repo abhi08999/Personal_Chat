@@ -23,6 +23,7 @@ export type WireMessage = {
   mediaKeyCiphertext?: string | null;
   mediaKeyNonce?: string | null;
   clientId?: string | null;
+  senderPublicKey?: string | null;
   reactions?: Record<string, string>;
   readAt?: string | Date | null;
   createdAt: string | Date;

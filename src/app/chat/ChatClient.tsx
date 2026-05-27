@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChatHeader } from '@/components/ChatHeader';
 import { MessageList } from '@/components/MessageList';
@@ -24,7 +24,7 @@ export function ChatClient({
 
   const [peerWithKey, setPeerWithKey] = useState<Peer | null>(peer);
 
-  // Poll for peer key in case they haven't logged in yet
+  // Fast poll until peer has a key (initial setup)
   useEffect(() => {
     if (peerWithKey?.publicKey) return;
     const id = setInterval(async () => {
@@ -36,7 +36,22 @@ export function ChatClient({
       }
     }, 3000);
     return () => clearInterval(id);
-  }, [peerWithKey]);
+  }, [peerWithKey?.publicKey]);
+
+  // Slow poll to detect key rotation while chat is open — if peer regenerates
+  // their keys on another device/browser, we'll pick up the new key within 20s
+  useEffect(() => {
+    const id = setInterval(async () => {
+      const r = await fetch('/api/keys/peer');
+      const j = await r.json();
+      if (j?.peer?.publicKey) {
+        setPeerWithKey((prev) =>
+          prev?.publicKey === j.peer.publicKey ? prev : j.peer
+        );
+      }
+    }, 20000);
+    return () => clearInterval(id);
+  }, []);
 
   // Make sure my own pubkey is fetched (server source of truth)
   const [meWithKey, setMeWithKey] = useState<Me>(me);
@@ -69,6 +84,36 @@ export function ChatClient({
 function Bound({ me, peer }: { me: Me; peer: Peer }) {
   const { messages, online, peerTyping, ready, sendText, sendImage, markRead, react, setTyping } = useChat(me, peer);
   const [screenGuard, setScreenGuard] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // iOS VisualViewport fix: when the keyboard opens iOS auto-scrolls the page
+  // which visually shifts "fixed" elements upward. We track the actual visible
+  // area and keep the container pinned to it so the header never moves.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    function pin() {
+      const el = mainRef.current;
+      if (!el || !vv) return;
+      el.style.height = vv.height + 'px';
+      el.style.top = vv.offsetTop + 'px';
+      window.scrollTo(0, 0);
+    }
+    pin();
+    vv.addEventListener('resize', pin);
+    vv.addEventListener('scroll', pin);
+    return () => {
+      vv.removeEventListener('resize', pin);
+      vv.removeEventListener('scroll', pin);
+    };
+  }, []);
+
+  // Request notification permission once (used for decoy notifications)
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Blur content when tab loses focus (deters screen recording / shoulder surfing)
   useEffect(() => {
@@ -86,7 +131,7 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
   if (!ready) return <Centered>Unsealing your messages…</Centered>;
 
   return (
-    <main className="fixed inset-0 flex flex-col overflow-hidden select-none">
+    <main ref={mainRef} className="fixed left-0 right-0 flex flex-col overflow-hidden select-none" style={{ top: 0, height: '100dvh' }}>
       {screenGuard && (
         <div className="fixed inset-0 z-[9999] backdrop-blur-3xl bg-white/90" />
       )}
