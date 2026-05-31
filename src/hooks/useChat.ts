@@ -201,6 +201,25 @@ export function useChat(me: Me, peer: Peer) {
 
     ch.bind('message:new', async (m: WireMessage) => {
       if (m.from !== me.id) fireDecoyNotification();
+
+      // Fast path for our OWN image echo: we already hold the local preview blob,
+      // so just confirm the optimistic bubble (clear pending) and keep the local
+      // object URL. Re-fetching mediaUrl from Blob storage to decrypt our own image
+      // can hang/CORS-fail on mobile and would leave the bubble stuck "sending".
+      if (m.from === me.id && m.contentType === 'image') {
+        setMessages((prev) => {
+          const idx = m.clientId ? prev.findIndex((x) => x.clientId === m.clientId) : -1;
+          if (idx >= 0) {
+            const copy = prev.slice();
+            copy[idx] = { ...prev[idx], ...m, imageObjectUrl: prev[idx].imageObjectUrl, pending: false, failed: false };
+            return copy;
+          }
+          if (prev.some((x) => x._id === m._id)) return prev;
+          return prev; // own image without optimistic entry — ignore (we sent it elsewhere)
+        });
+        return;
+      }
+
       const d = await decrypt(m);
       setMessages((prev) => {
         const idx = m.clientId ? prev.findIndex((x) => x.clientId === m.clientId && x.pending) : -1;
@@ -289,7 +308,6 @@ export function useChat(me: Me, peer: Peer) {
   const sendImage = useCallback(async (file: File) => {
     if (!privateKeyRef.current || !peer.publicKey) return;
     const clientId = crypto.randomUUID();
-    const bytes = new Uint8Array(await file.arrayBuffer());
     const objUrl = URL.createObjectURL(file);
     objectUrlsRef.current.push(objUrl);
 
@@ -299,37 +317,45 @@ export function useChat(me: Me, peer: Peer) {
     };
     setMessages((p) => [...p, optimistic]);
 
-    const enc = await encryptBytesForPeer(bytes, peer.publicKey, privateKeyRef.current);
-    const up = await fetch('/api/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: enc.mediaCiphertext,
-    });
+    const markFailed = () => setMessages((p) => p.map((m) => m.clientId === clientId
+      ? { ...m, failed: true, pending: false } : m));
 
-    if (!up.ok) {
-      setMessages((p) => p.map((m) => m.clientId === clientId
-        ? { ...m, failed: true, pending: false } : m));
-      return;
-    }
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const enc = await encryptBytesForPeer(bytes, peer.publicKey, privateKeyRef.current);
+      const up = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: enc.mediaCiphertext,
+      });
+      if (!up.ok) { markFailed(); return; }
 
-    const { url: mediaUrl } = await up.json();
-    const textEnv = await encryptText('[image]', peer.publicKey, privateKeyRef.current);
-    const res = await fetch('/api/messages/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...textEnv,
-        contentType: 'image',
-        mediaUrl,
-        mediaNonce: enc.mediaNonce,
-        mediaKeyCiphertext: enc.mediaKeyCiphertext,
-        mediaKeyNonce: enc.mediaKeyNonce,
-        clientId,
-      }),
-    });
-    if (!res.ok) {
-      setMessages((p) => p.map((m) => m.clientId === clientId
-        ? { ...m, failed: true, pending: false } : m));
+      const { url: mediaUrl } = await up.json();
+      const textEnv = await encryptText('[image]', peer.publicKey, privateKeyRef.current);
+      const res = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...textEnv,
+          contentType: 'image',
+          mediaUrl,
+          mediaNonce: enc.mediaNonce,
+          mediaKeyCiphertext: enc.mediaKeyCiphertext,
+          mediaKeyNonce: enc.mediaKeyNonce,
+          clientId,
+        }),
+      });
+      if (!res.ok) { markFailed(); return; }
+
+      // Confirm immediately on success instead of waiting only for the Pusher
+      // echo — keep the local preview, just clear the spinner and set the real id.
+      const { message } = await res.json().catch(() => ({ message: null }));
+      if (message?._id) {
+        setMessages((p) => p.map((m) => m.clientId === clientId
+          ? { ...m, _id: message._id, pending: false, failed: false } : m));
+      }
+    } catch {
+      markFailed();
     }
   }, [me.id, peer.publicKey]);
 
