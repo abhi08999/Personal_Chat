@@ -128,17 +128,23 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
 
     (async () => {
       try {
+        // Register and wait for the SW to be fully active
         const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') return;
 
+        // Always unsubscribe first then re-subscribe so we always have a
+        // fresh subscription saved — stale subscriptions silently fail.
         let sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidKey),
-          });
-        }
+        if (sub) await sub.unsubscribe().catch(() => {});
+
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        });
+
         await fetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

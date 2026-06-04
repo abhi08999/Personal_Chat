@@ -3,14 +3,20 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: '@bhi & Mommy',
+  title: 'Rummy',
   description: 'Our private space.',
   robots: { index: false, follow: false },
-  icons: { icon: '/favicon.svg' },
+  icons: { icon: '/favicon.svg', apple: '/favicon.svg' },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Rummy',
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#ffd0dc',
+  themeColor: '#e8194d',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -23,6 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Prevent flash of wrong theme on first paint */}
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('am.theme');if(t==='dark'||(t==null&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch{}` }} />
+        {/* PWA / iOS standalone */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Rummy" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
       </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>

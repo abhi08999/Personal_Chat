@@ -1,0 +1,21 @@
+{
+  "name": "Rummy",
+  "short_name": "Rummy",
+  "description": "Our private space 💕",
+  "start_url": "/chat",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a080f",
+  "theme_color": "#e8194d",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social"],
+  "prefer_related_applications": false
+}

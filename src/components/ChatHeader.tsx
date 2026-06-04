@@ -39,16 +39,19 @@ export function ChatHeader({
   const nameEmoji = HANDLE_EMOJIS[peerHandle] ?? '';
 
   return (
-    <header className="shrink-0 z-20 backdrop-blur-2xl bg-white/65 dark:bg-ink-900/85 border-b border-blush-200/50 dark:border-ink-700/30">
-      <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
-        <Avatar name={peerName} size={42} online={online} />
+    <header className="shrink-0 z-20 bg-white/70 dark:bg-ink-900/90 backdrop-blur-2xl border-b border-blush-100/80 dark:border-white/[0.06]">
+      <div className="max-w-3xl mx-auto px-4 py-3.5 flex items-center gap-3">
+        <Avatar name={peerName} size={44} online={online} />
 
         <div className="flex-1 min-w-0">
-          <div className="font-display text-lg leading-tight truncate text-ink-900 dark:text-white">
-            {peerName}{nameEmoji && <span className="ml-1">{nameEmoji}</span>}
+          <div className="font-display text-xl leading-tight truncate text-ink-900 dark:text-white font-medium">
+            {peerName}{nameEmoji && <span className="ml-1.5 text-base">{nameEmoji}</span>}
           </div>
-          <div className="text-[11px] text-ink-700/60 dark:text-white/50 truncate">
-            {peerTyping ? 'typing…' : online ? 'online' : 'offline'}
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${online ? 'bg-emerald-400' : 'bg-blush-300 dark:bg-white/20'}`} />
+            <span className="text-[11px] text-ink-700/55 dark:text-white/45 truncate">
+              {peerTyping ? 'typing…' : online ? 'online' : 'offline'}
+            </span>
           </div>
         </div>
 
@@ -56,15 +59,15 @@ export function ChatHeader({
         <motion.button
           onClick={handlePing}
           disabled={pingSent}
-          title={pingSent ? 'Sent 💜' : 'Tap — thinking of you?'}
-          className="text-base leading-none select-none disabled:opacity-50 focus:outline-none"
+          title={pingSent ? 'Sent 💕' : 'Thinking of you?'}
+          className="text-[17px] leading-none select-none disabled:opacity-50 focus:outline-none active:scale-90 transition-transform"
           animate={pingSent
-            ? { scale: [1, 1.9, 1.3, 1], rotate: [0, -15, 15, 0] }
-            : { y: [0, -3, 0], scale: [1, 1.1, 1] }
+            ? { scale: [1, 2, 1.3, 1], rotate: [0, -15, 15, 0] }
+            : { y: [0, -2.5, 0], scale: [1, 1.08, 1] }
           }
           transition={pingSent
-            ? { duration: 0.5, ease: 'easeOut' }
-            : { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
+            ? { duration: 0.45, ease: 'easeOut' }
+            : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }
           }
         >
           💜
@@ -72,18 +75,18 @@ export function ChatHeader({
 
         <button
           onClick={toggle}
-          className="p-2 rounded-xl hover:bg-blush-100 dark:hover:bg-ink-700/50 text-ink-700/70 dark:text-white/60 transition"
+          className="p-2 rounded-xl hover:bg-blush-100 dark:hover:bg-white/8 text-ink-700/60 dark:text-white/55 transition"
           title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
         </button>
 
         <button
           onClick={logout}
-          className="p-2 rounded-xl hover:bg-blush-100 dark:hover:bg-ink-700/50 text-ink-700/70 dark:text-white/60 transition"
+          className="p-2 rounded-xl hover:bg-blush-100 dark:hover:bg-white/8 text-ink-700/60 dark:text-white/55 transition"
           title="Lock"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-[18px] h-[18px]" />
         </button>
       </div>
     </header>

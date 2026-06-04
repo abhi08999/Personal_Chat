@@ -5,28 +5,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Warm rose-cream palette — replaces old blush pinks
+        // Warm rose-pink for backgrounds/borders
         blush: {
-          50:  '#fff5f7',
-          100: '#ffe8ed',
-          200: '#ffd0dc',
-          300: '#ffb3c6',
-          400: '#ff8fa8',
-          500: '#e86b8a',
+          50:  '#fff3f7',
+          100: '#ffe0ec',
+          200: '#ffc2d8',
+          300: '#ff9bbf',
+          400: '#f566a0',
+          500: '#e84480',
         },
-        // Rose/crimson — replaces old lavender purples (class names unchanged so no component edits)
+        // Vivid cherry/magenta accent — kept as "lavender" so no component edits needed
         lavender: {
-          300: '#ffafc5',
-          400: '#ff7096',
-          500: '#e84c78',
-          600: '#c93060',
-          700: '#9e1f50',
+          300: '#ffaed0',
+          400: '#f56694',
+          500: '#e8194d',
+          600: '#c00a3a',
+          700: '#8f0629',
         },
-        // Dark burgundy — replaces old dark purple ink
+        // Near-black with warm plum undertone
         ink: {
-          900: '#1a080e',
-          800: '#2d1218',
-          700: '#4a1c28',
+          900: '#0a080f',
+          800: '#160e22',
+          700: '#271437',
         },
       },
       fontFamily: {
@@ -34,14 +34,14 @@ const config: Config = {
         sans:    ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        soft:   '0 8px 32px -8px rgba(201, 48, 96, 0.22)',
-        glow:   '0 0 40px -4px rgba(232, 76, 120, 0.45)',
-        bubble: '0 4px 16px -4px rgba(232, 107, 138, 0.2)',
+        soft:   '0 8px 32px -8px rgba(232,25,77,0.28)',
+        glow:   '0 0 40px -4px rgba(232,25,77,0.55)',
+        bubble: '0 4px 16px -4px rgba(232,25,77,0.18)',
       },
       backgroundImage: {
-        'gradient-romance':     'linear-gradient(135deg, #fff5f7 0%, #ffd0dc 40%, #ffb3c6 100%)',
-        'gradient-bubble-me':   'linear-gradient(135deg, #e84c78 0%, #c93060 100%)',
-        'gradient-bubble-them': 'linear-gradient(135deg, #ffffff 0%, #fff5f7 100%)',
+        'gradient-romance':     'linear-gradient(135deg, #fff3f7 0%, #ffc2d8 40%, #ff9bbf 100%)',
+        'gradient-bubble-me':   'linear-gradient(135deg, #e8194d 0%, #c00a3a 100%)',
+        'gradient-bubble-them': 'linear-gradient(135deg, #ffffff 0%, #fff3f7 100%)',
       },
       animation: {
         'fade-up':    'fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
