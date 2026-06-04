@@ -93,8 +93,10 @@ export function MessageList({
   }
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
-      <div className="max-w-3xl mx-auto px-3 sm:px-5 py-5 space-y-5">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 relative">
+      {/* Floating hearts wallpaper */}
+      <FloatingHearts />
+      <div className="max-w-3xl mx-auto px-3 sm:px-5 py-5 space-y-5 relative z-10">
         {groups.map((g, i) => (
           <div key={i} className="space-y-2">
             <div className="text-center text-[11px] uppercase tracking-[0.16em] text-ink-700/45 dark:text-white/35 my-3">{g.day}</div>
@@ -126,6 +128,44 @@ export function MessageList({
           <img src={lightbox} alt="" className="max-h-[88vh] max-w-full rounded-2xl shadow-glow" />
         </button>
       )}
+    </div>
+  );
+}
+
+// ── Floating hearts wallpaper ─────────────────────────────────────────────────
+const BG_HEARTS = [
+  { size: 10, left: '5%',  delay: '0s',    duration: '16s' },
+  { size:  7, left: '18%', delay: '4.2s',  duration: '20s' },
+  { size: 13, left: '31%', delay: '2.0s',  duration: '14s' },
+  { size:  8, left: '47%', delay: '7.5s',  duration: '18s' },
+  { size: 11, left: '60%', delay: '1.0s',  duration: '15s' },
+  { size:  6, left: '74%', delay: '5.8s',  duration: '19s' },
+  { size: 14, left: '86%', delay: '9.5s',  duration: '13s' },
+  { size:  9, left: '38%', delay: '12.0s', duration: '17s' },
+  { size:  7, left: '92%', delay: '3.5s',  duration: '21s' },
+];
+
+function FloatingHearts() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none select-none" aria-hidden>
+      {BG_HEARTS.map((h, i) => (
+        <span
+          key={i}
+          className="absolute bottom-0 dark:opacity-[0.07]"
+          style={{
+            left: h.left,
+            fontSize: h.size,
+            opacity: 0.11,
+            animationName: 'floatHeart',
+            animationDuration: h.duration,
+            animationDelay: h.delay,
+            animationTimingFunction: 'ease-in-out',
+            animationIterationCount: 'infinite',
+          }}
+        >
+          ❤️
+        </span>
+      ))}
     </div>
   );
 }

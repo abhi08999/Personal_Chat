@@ -82,11 +82,20 @@ export function ChatClient({
 }
 
 function Bound({ me, peer }: { me: Me; peer: Peer }) {
-  const { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, editMessage, markRead, react, setTyping } = useChat(me, peer);
+  const { messages, online, peerTyping, ready, historyLoaded, peerPinged, sendText, sendImage, editMessage, markRead, react, setTyping, sendPing } = useChat(me, peer);
   const [screenGuard, setScreenGuard] = useState(false);
+  const [heartBurst, setHeartBurst] = useState(false);
   const [replyTo, setReplyTo] = useState<import('@/types').DecryptedMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<import('@/types').DecryptedMessage | null>(null);
   const mainRef = useRef<HTMLElement>(null);
+
+  // Show heart burst when peer pings us
+  useEffect(() => {
+    if (peerPinged === 0) return;
+    setHeartBurst(true);
+    const t = setTimeout(() => setHeartBurst(false), 3000);
+    return () => clearTimeout(t);
+  }, [peerPinged]);
 
   // iOS VisualViewport fix: when the keyboard opens iOS auto-scrolls the page
   // which visually shifts "fixed" elements upward. We track the actual visible
@@ -159,7 +168,8 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
       {screenGuard && (
         <div className="fixed inset-0 z-[9999] backdrop-blur-3xl bg-white/90 dark:bg-ink-900/90" />
       )}
-      <ChatHeader peerName={peer.displayName} peerHandle={peer.handle} online={online.has(peer.id)} peerTyping={peerTyping} />
+      {heartBurst && <HeartBurst />}
+      <ChatHeader peerName={peer.displayName} peerHandle={peer.handle} online={online.has(peer.id)} peerTyping={peerTyping} onPing={sendPing} />
       <MessageList
         messages={messages}
         historyLoaded={historyLoaded}
@@ -182,6 +192,42 @@ function Bound({ me, peer }: { me: Me; peer: Peer }) {
         onCancelEdit={() => setEditingMessage(null)}
       />
     </main>
+  );
+}
+
+// ── "Thinking of you" heart burst ────────────────────────────────────────────
+const BURST_HEARTS = Array.from({ length: 18 }, (_, i) => ({
+  left:  `${10 + (i * 4.8) % 80}%`,
+  delay: `${(i * 0.07).toFixed(2)}s`,
+  rise:  `-${50 + (i * 19) % 38}vh`,
+  rise2: `-${70 + (i * 23) % 28}vh`,
+  rot:   `${-25 + (i * 41) % 50}deg`,
+  size:  14 + (i * 6) % 18,
+}));
+
+function HeartBurst() {
+  return (
+    <div className="fixed inset-x-0 bottom-24 z-[9998] pointer-events-none overflow-hidden select-none" aria-hidden>
+      {BURST_HEARTS.map((h, i) => (
+        <span
+          key={i}
+          className="absolute"
+          style={{
+            left: h.left,
+            fontSize: h.size,
+            animationName: 'heartPop',
+            animationDuration: '2.8s',
+            animationDelay: h.delay,
+            animationFillMode: 'forwards',
+            animationTimingFunction: 'cubic-bezier(0.22,1,0.36,1)',
+            ['--rise' as any]: h.rise,
+            ['--rise2' as any]: h.rise2,
+          }}
+        >
+          ❤️
+        </span>
+      ))}
+    </div>
   );
 }
 

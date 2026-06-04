@@ -66,6 +66,7 @@ export function useChat(me: Me, peer: Peer) {
   const [peerTyping, setPeerTyping] = useState(false);
   const [ready, setReady] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [peerPinged, setPeerPinged] = useState(0);
   const privateKeyRef = useRef<Uint8Array | null>(null);
   const channelRef = useRef<PresenceChannel | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
@@ -257,6 +258,13 @@ export function useChat(me: Me, peer: Peer) {
       setMessages((prev) => prev.map((msg) => msg._id === m._id ? { ...msg, ...d } : msg));
     });
 
+    ch.bind('ping:heart', ({ from }: { from: string }) => {
+      if (from !== me.id) {
+        try { playPing(); } catch {}
+        setPeerPinged((n) => n + 1);
+      }
+    });
+
     ch.bind('typing', ({ from, isTyping }: { from: string; isTyping: boolean }) => {
       if (from !== me.id) setPeerTyping(isTyping);
     });
@@ -388,5 +396,10 @@ export function useChat(me: Me, peer: Peer) {
     }).catch(() => {});
   }, []);
 
-  return { messages, online, peerTyping, ready, historyLoaded, sendText, sendImage, editMessage, markRead, react, setTyping };
+  const sendPing = useCallback(async (): Promise<boolean> => {
+    const res = await fetch('/api/ping', { method: 'POST' });
+    return res.ok;
+  }, []);
+
+  return { messages, online, peerTyping, ready, historyLoaded, peerPinged, sendText, sendImage, editMessage, markRead, react, setTyping, sendPing };
 }
